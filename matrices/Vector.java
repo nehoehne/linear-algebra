@@ -1,6 +1,5 @@
 package matrices;
 
-
 public abstract class Vector extends Matrix {
 
 	//

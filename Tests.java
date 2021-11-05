@@ -1,10 +1,7 @@
 import matrices.Column;
 import matrices.Matrix;
 import matrices.Row;
-import matrices.SystemSolution;
-import matrices.UniqueSolution;
 import matrices.Vector;
-import operations.MatrixOperations;
 
 public class Tests {
 
@@ -18,7 +15,7 @@ public class Tests {
 		Matrix w = null;
 		
 		try {
-			w = MatrixOperations.add(u, v);
+			w = Matrix.add(u, v);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -50,7 +47,7 @@ public class Tests {
 		u4.randomizeInt(0, 3);
 		Matrix v4 = new Matrix(3,2);
 		v4.randomizeInt(0, 3);
-		Matrix w4 = MatrixOperations.multiply(u4, v4);
+		Matrix w4 = Matrix.multiply(u4, v4);
 		
 		System.out.println("Multiply Matrices:");
 		System.out.println("u4:");

@@ -3,9 +3,7 @@ package matrices;
 import java.util.ArrayList;
 /*
  * Some issues to fix:
- * - use of break and continue in loops 
- * - return statements in the middle of a method/multiple return statements 
- * - Unnecessary creation of objects (row operations + dot product/matrix multiplication)
+ * - Unnecessary creation of objects (dot product/matrix multiplication)
  * 		- idea for dot product make a parent method in matrix that has direct access to the matrix? 
  */
 public class Matrix {
@@ -38,13 +36,12 @@ public class Matrix {
 		
 		this.u = u;
 		numRows = u.length;
-		
+		numCols = u[0].length;
+
 		//Insure that all rows are the same length
-		for(int i = 0; i < u.length; i++) 
-			if(u[i].length != u[0].length) 
+		for(int i = 0; i < numRows; i++) 
+			if(u[i].length != numCols) 
 				throw UNDIFINED_MATRIX;
-		
-		numCols = u[0].length; 
 		
 	}
 	
@@ -125,6 +122,20 @@ public class Matrix {
 		return s;
 	}//toString
 	
+	public boolean equals(Matrix other) {
+		
+		//matching rows and cols 
+		boolean equals = other.getNumRows() == this.numRows 
+						&& other.getNumCols() == this.numCols;
+		
+		//matching entries 
+		for(int i = 0; i < numRows && equals; i++)
+			for(int j = 0; j < numCols && equals; j++)
+				equals = this.u[i][j] == other.getEntry(i, j);
+		
+		return equals; 
+	}
+
 	//
 	//Getters and setters
 	//
@@ -192,13 +203,12 @@ public class Matrix {
 	/*
 	 * Multiplies row in given the position by a scalar.
 	 */
-	public void multiplyRow(int position, float scalar) {
+	public void multiplyRow(int rowIndx, float scalar) {
 		
 		//Stores the row to be scaled 
-		//*INEFICIENT*
-		Row row = this.getRow(position);
-		row.multiply(scalar);
-		this.setRow(position, row);
+		for(int i = 0; i < numCols; i++)
+			u[rowIndx][i] *= scalar; 
+		
 	}//multiplyRow
 	
 	/*
@@ -227,33 +237,33 @@ public class Matrix {
 		int row = numRows-1;//Initialize as last row
 		int lastCol = numCols-1;//Index of the last col 
 		boolean zeroRow = true;//All entries left of partition are zero
+		String solution = null; //return message
 		
 		do {
 			
-			for(int col = lastCol-1; col>=0; col--) 
-				if(Math.abs(u[row][col]) > ZERO) {
+			for(int col = lastCol-1; col>=0 && zeroRow; col--) 
+				if(Math.abs(u[row][col]) > ZERO) 
 					zeroRow = false;
-					break;//*FIX THIS*
-				}
 			
 			if(zeroRow&&Math.abs(u[row][lastCol]) > ZERO)
-				return "System is inconsistent.";//*FIX THIS*
+				solution = "System is inconsistent.";
 			
-		}while(zeroRow&&--row>=0);
+		}while(zeroRow&&--row>=0 && solution == null);
 
-		
 		//Put matrix into RREF
-		backSub();
-		
-		
-		//Now that the system is in RREF we know that there is a unique sol if 
-		//the # of equations = # of unknowns => # non-zero rows = # cols -1
-				
-		if(numCols-1 > row+1)
-			return parametericSol(pivotCols);//*FIX THIS*
-		
-		return uniqueSol();//*FIX THIS*
-		
+		if(solution == null) {
+			
+			backSub();
+			
+			//Now that the system is in RREF we know that there is a unique sol if 
+			//the # of equations = # of unknowns => # non-zero rows = # cols -1
+					
+			if(numCols-1 > row+1)
+				solution = parametericSol(pivotCols);
+			else
+				solution = uniqueSol();
+		}
+		return solution; 
 	}//solveSystem
 	
 	/*
@@ -347,29 +357,29 @@ public class Matrix {
 	 */
 	public void backSub() {
 		
-		int row = numRows;
-		
-		while(--row >= 0) {//Iterate through rows bottom up 
+		int row = numRows-1; //index of last row 
+		int pivotCol; 
+		boolean isPivot; 
+
+		while(row >= 0) { //Iterate through rows bottom up 
 			
-			
-			int pivotCol = -1;
-			
+			pivotCol = -1; //initialize to invalid index
+			isPivot = false; 
+
 			//Find pivot col
-			for(int j = 0; j < numCols-1; j++)//We don't care about the last col 
+			for(int j = 0; j < numCols-1 && !isPivot; j++)//We don't care about the last col 
 				if(Math.abs(u[row][j]) > ZERO) {
 					pivotCol = j;
-					break;//*FIX THIS*
+					isPivot = true;
 				}
 			
-			if(pivotCol == -1) 
-				continue;//*FIX THIS*
-			
-			//Add to rows above
-			for(int j = row-1;j >=0; j--) 
-				if(Math.abs(u[j][pivotCol])>ZERO)
-					addRows(j, row, -1*u[j][pivotCol]);
-			
-		}
+			if(isPivot)
+				for(int j = row-1; j >= 0; j--) //Add to rows above
+					if(Math.abs(u[j][pivotCol]) > ZERO)
+						addRows(j, row, -1*u[j][pivotCol]);
+
+			row--; 
+		} //while
 	}//BackSub
 	
 	/*
@@ -383,32 +393,32 @@ public class Matrix {
 				
 		int pivotRow = 0;
 		int pivotCol = 0;
-		
+		int maxPosition;
+
 		while(pivotRow < numRows && pivotCol < numCols) {
 			
 			//Find the row below the pivot with the highest absolute value
-			int maxPosition = getMaxPosition(pivotCol, pivotRow);
+			maxPosition = getMaxPosition(pivotCol, pivotRow);
 			
-			if(Math.abs(u[maxPosition][pivotCol]) < ZERO) {//skip if zero
+			if(Math.abs(u[maxPosition][pivotCol]) < ZERO) //skip if zero
 				pivotCol++;
-				continue;//*FIX THIS*
-			}else
+			else {
 				pivotCols.add(pivotCol);
 
-			//Swap rows
-			if(maxPosition != pivotRow) 
-				swapRows(maxPosition, pivotRow);
-			
-			
-			//Make leading 1
-			multiplyRow(pivotRow, 1/u[pivotRow][pivotCol]);
-			
-			//Add to rows below
-			for(int i = pivotRow+1; i < numRows; i++) 
-				addRows(i, pivotRow, -1*u[i][pivotCol]);
-			
-			pivotRow++; pivotCol++;
-			
+				//Swap rows
+				if(maxPosition != pivotRow) 
+					swapRows(maxPosition, pivotRow);
+				
+				
+				//Make leading 1
+				multiplyRow(pivotRow, 1/u[pivotRow][pivotCol]);
+				
+				//Add to rows below
+				for(int i = pivotRow+1; i < numRows; i++) 
+					addRows(i, pivotRow, -1*u[i][pivotCol]);
+				
+				pivotRow++; pivotCol++;
+			}
 		}//while
 		
 		return pivotCols;
@@ -477,7 +487,7 @@ public class Matrix {
 		//Check if operation is defined 
 		if(u.getNumCols() == v.getNumRows()) {
 			
-			//*INEFFICIENT*
+			//this implementation is clean but inenfficient due to object creation 
 			Column col; Row row; float dotProduct;
 			
 			for(int i = 0; i < w.getNumRows(); i++) {
